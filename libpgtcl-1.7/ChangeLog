@@ -1,0 +1,322 @@
+
+$Id: ChangeLog,v 1.57 2009/04/06 15:22:01 karl Exp $
+
+2009-04-06 Karl Lehenbauer
+    * Pgtcl 1.7 released.
+
+2009-02-26 Karl Lehenbauer
+    * Make PostgreSQL helpers "res_dont_care" and "res_must_succeed"
+      accept PGRES_TUPLES_OK as a sucessful result as well as
+      PGRES_COMMAND_OK.
+
+2008-05-24 Karl Lehenbauer
+    * Add new pg_result suboption -tupleArrayWithoutNulls.  It works like
+      -tupleArray except if a field is null, it unsets the field from
+      the array.
+
+2008-05-23 Karl Lehenbauer
+    * Add "escape_bytea" and "unescape_bytea" to the methods that can be
+      invoked from $conn.
+
+    * Extend pg_escape_bytea to allow a connection handle to be specified.
+      If specified, libpq's PQescapeByteaConn is used rather than
+      deprecated PQescapeBytea, which can return incorrect results since
+      it can't determine whether standard-conforming strings are enabled.
+
+      If the "$conn escape_bytea ..." method is used, the connection-handle
+      version is automatically used.
+
+    * Detect if lo_truncate is available in libpq or not and, if not, return 
+      an error if it is attempted.
+
+2008-05-20 Karl Lehenbauer
+    * Add support for the lo_truncate function that truncates a large object
+      to a given length.
+
+    * Version bump to 1.7.
+
+2007-12-14 Karl Lehenbauer <karl-pg@sc.com>
+    * Update autoconf build to Tcl Extension Architecture (TEA) 3.6
+
+    * Extend pg_quote to allow a connection handle to be specified.
+      If the connection handle is specified and the string matches the 
+      null string, returns "NULL" (without quotes).  If not, returns 
+      the string quoted for inclusion in SQL commands.
+
+    * pg_quote can be invoked as a method of the connection handle
+      as well.  For instance, "$db quote $string".
+
+    * Removed unused variables and silence compiler warnings with casting.
+
+    * Added "internal_position" and "internal_query" to the error options.
+
+2007-02-08 Brett Schwarz <brett_schwarz@yahoo.com>
+    * Added support for async connections. Note that you will have to 
+      use [after] command to find the result of the connection. Callbacks
+      won't work, since the sock isn't established yet
+
+2007-01-24 Brett Schwarz <brett_schwarz@yahoo.com>
+    * added additional sub commands to dbinfo (version, protocol, param,
+    backendpid, socket)
+
+2006-07-05 Karl Lehenbauer <karl-pg@sc.com>
+    * Updated autoconf build to Tcl Extension Architecture (TEA) 3.5
+
+2006-01-01 Brett Schwarz <brett_schwarz@yahoo.com>
+    * changed the commands that handle params, such that if a value is NULL
+      then the lib will change the paramValues value to '\0' so that
+      the backend will insert a NULL correctly
+
+2005-11-27 Karl Lehenbauer <karl-pg@sc.com>
+    * Bumped version number to 1.6
+
+    * Add pg_null_value_string, ::pg::null_value_string and
+      "$conn null_value_string" to get and set a special string value that
+      will be returned for fields containing null values from queries.
+
+      pg_select and pg_execute use this value for null values.  If not set,
+      they use the traditional empty string.
+
+      pg_exec, pg_exec_prepared, pg_sendquery and pg_sendquery_prepared use
+      this value as well.  However, it can be overridden or replaced for
+      one specific result using "pg_result $result -null_value_string NULL",
+      etc, or by executing the result handle, as in
+      "$result -null_value_string NULL"
+
+      Updated documentation and regenerated HTML and PDF files.
+
+2005-11-09 Karl Lehenbauer <karl-pg@sc.com>
+    * List -cmdTuples as one of the possible options when executing
+      pg_result without arguments.
+
+2005-07-18 Karl Lehenbauer <karl-pg@sc.com>
+    * Made pggrok database introspection code much more useful -- routines
+      for finding out data about fields and indexes in a table now load
+      on array with data about each field (index) and execute a code body
+      on it, rather than punting with a call to parray
+
+2005-07-01 Karl Lehenbauer <karl-pg@sc.com>
+    * Fixed memory leaks when connections-as-commands are used
+      ($conn exec $statement, etc)
+
+2005-04-16 Brett Schwarz <brett_schwarz@yahoo.com>
+    * added more documentation about the new capabilities
+
+2005-02-25 Brett Schwarz <brett_schwarz@yahoo.com>
+    * took away pg::conninfo and pg::results, and made one command
+      pg::dbinfo. Usage is pg::dbinfo connections and 
+      pg::dbinfo results $conn
+
+2004-11-30 Karl Lehenbauer <karl-pg@sc.com>
+    * Document pg_exec_prepared, pg_results, and pg_sendquery_prepared.
+
+    * Document pg_exec's ability to take optional arguments for 
+      $-substitution in PostgreSQL 7.4+.
+
+    * Documented pg_getresult and pg_result -error suboptions.  
+
+    * Pasted connect string options from the libpq manual rather
+      than simply referring Pgtcl users to the libpq manual.
+
+    * Regenerated pdf and html documentation.
+
+2004-11-29 Brett Schwarz <brett_schwarz@yahoo.com>
+    * Added commands to escape and unescape binary strings
+
+2004-11-29 Karl Lehenbauer <karl-pg@sc.com>
+    * Added library of useful PostreSQL helper functions to the playpen.
+
+    * Added dbobjects PostgreSQL/Itcl-object interface package to the playpen.
+
+    * Added pggrok code to introspect into Postgres databases to the playpen.
+
+2004-11-23 Karl Lehenbauer <karl-pg@sc.com>
+    * Simplify result object processing
+
+    * Fixed bug in Pg_cancelrequest where the error message would
+      not be returned.
+
+    * Remove unused variables.
+
+    * Silence compiler warnings about a fall-through (that couldn't
+      be reached) that would cause a function declared to return something
+      to not return anything and about a possibly uninitialized variable.
+
+2004-11-22 Karl Lehenbauer <karl-pg@sc.com>
+    * Created playpen directory where interesting things that are not
+      yet ready for prime time can be examined and messed with.  
+      Added code for turning OIDs returned by pg_result -lAttributes
+      into data type names.
+
+2004-11-19 Karl Lehenbauer <karl-pg@sc.com>
+    * Updated autoconf build to TEA 3.1 / autoconf 2.59
+
+    * Added import_sampledata_prepared_onetransaction.tcl to the tests
+
+2004-11-17 Karl Lehenbauer <karl-pg@sc.com>
+    * minor optimization in connections-as-commands and results-as-commands
+      where we don't copy and then swap, we copy it the way we want it to
+      end up (first and second elements of objv reversed).
+
+    * connections-as-commands and results-as-commands now error out when 
+      called with no arguments
+
+2004-11-16 Karl Lehenbauer <karl-pg@sc.com>
+    * libpgtcl will again build with versions of Tcl < 8.5 thanks to a little
+      extra checking for HAVETCL_NEWDICTOBJ
+
+    * Fixed several calls to Tcl_AppendStringsToObj whose arguments were 
+      terminated with -1 instead of NULL, eliminating several segmentation
+      violations that could occur while preparing error messages.
+
+    * Removed spurious newline at the start of the error message when
+      the query result handle passed to pg_result is invalid.
+
+2004-11-05 Brett Schwarz <brett_schwarz@yahoo.com>
+    * added delete proc for result handle cleanup
+
+2004-11-02 Brett Schwarz <brett_schwarz@yahoo.com>
+    * added delete proc for connection handle cleanup
+
+2004-09-20 Brett Schwarz <brett_schwarz@yahoo.com>
+    * added preliminary support for dicts in pg_result. Need to have
+      Tcl 8.5 or the dicts package extension. Need to set            
+      HAVETCL_NEWDICTOBJ manually for now.
+
+2004-08-23 Brett Schwarz <brett_schwarz@yahoo.com>
+    * added tcltest script of testing pgtcl.
+
+2004-08-21 Brett Schwarz <brett_schwarz@yahoo.com>
+    * Made the result handle into a command, and added associated command
+      dispatcher.
+
+2004-08-18 Brett Schwarz <brett_schwarz@yahoo.com>
+    * Added another way to specify the connection string to pg::connect:
+      pg::connect -connlist {host myhost port myport ...}. This is similiar
+      to -conninfo, except that the arg is a key value list.
+
+    * Added -connhandle option to pg::connect to specify the connection
+      handle name. If not specified, then connection handle name is
+      derived by pgtcl (as before).
+
+2004-08-16 Brett Schwarz <brett_schwarz@yahoo.com>
+    * added Pg_results (pg::results, pg_results) command that returns
+      the result handles for a particular connection
+
+2004-08-15 Brett Schwarz <brett_schwarz@yahoo.com>
+    * Added new command pg::conninfo that returns a list of PG connection
+      handles
+
+2004-07-02 Brett Schwarz <brett_schwarz@yahoo.com>
+    * added basic capability to use the connection handle as a command
+    * since connection handle can be a command now, I made the returned
+      handle namespace qualified, with respect to the calling namespace
+
+2004-06-29 Brett Schwarz <brett_schwarz@yahoo.com>
+    * Added proper Tcl namespace support (i.e. ::pg::connect)
+
+2004-06-28 Karl Lehenbauer <karl-pg@sc.com>
+    * Version 1.4 released
+
+2004-06-22 Karl Lehenbauer <karl-pg@sc.com>
+    * Added new optional subidentifiers to pg_result $resultID -error. 
+      You can specify one of "severity", "sqlstate", "primary", "detail",
+      "hint", "position", "context", "file", "line", or "function" to
+      get the severity (ERROR, FATAL, PANIC, WARNING, NOTICE, DEBUG,
+      INFO, or LOG or a localized translation of one of these), the
+      SQLSTATE code (see Appendix A of the Postgres manual), the
+      primary human-readable error message, the optional secondary
+      error message carrying more detail about the problem, the hint,
+      an optional suggestion about what to do, the position, an error
+      cursor position as an index into the original statement string
+      starting from 1 (in characters, not bytes), the context,
+      the source file where the error was reported, the line number of
+      the source code where the error was reported, and the name
+      of the source code function reporting the error, respectively.
+
+      With newer versions of Postgres, $-variable substitution is now
+      supported in pg_sendquery as it is in pg_exec.
+
+    * Added a new function, pg_sendquery_prepared, that supports
+      asynchronous invocation of prepared statements.
+
+2004-06-21 Karl Lehenbauer <karl-pg@sc.com>
+    * Added parameter support to the asynchronous pg_sendquery function.
+      With newer versions of Postgres, $-variable substitution is now
+      supported in pg_sendquery as it is in pg_exec.
+
+    * Added a new function, pg_sendquery_prepared, that supports
+      asynchronous invocation of prepared statements.
+
+2004-05-26 Karl Lehenbauer <karl-pg@sc.com>
+    * Changed configure script to use pg_config to find the path to
+      PostgreSQL includes and libraries.
+
+    * Altered libpgtcl to no longer require access to internal PostgreSQL
+      include files.
+
+    * Changed configure script to determine whether or not PostgreSQL 7.4+
+      functions PQexecParams and PQexecPrepared are available or not.
+
+2004-05-21 Karl Lehenbauer <karl-pg@sc.com>
+    * Add pg_exec_prepared to execute pre-prepared SQL statements with 
+      parameters.
+
+2004-04-23 Karl Lehenbauer <karl-pg@sc.com>
+    * Add pg_quote function to escape strings.  It adds the outside quotes, too.
+
+2004-04-14 Karl Lehenbauer <karl-pg@sc.com>
+    * Modify pg_exec to support $-variable substitution for PostgreSQL 7.4 and
+      above (protocol >= 3).  For example, you can now do stuff like
+          pg_exec $conn {select * from foo where field1 = $1} $value
+
+2004-02-14  Brett Schwarz <brett_schwarz@yahoo.com>
+    * Updated with the fixes that went into the -core libpgtcl release
+    * Also added fix for WSAStartup posted by anonymous on the bug list
+
+2003-01-14  Brett Schwarz <brett_schwarz@yahoo.com>
+    * added -cmdTuples to pg_result (code submitted by Artur Trzewik)
+
+2002-11-19  Brett Schwarz <brett_schwarz@yahoo.com>
+
+    * Improved the performance of -list a little bit
+
+2002-11-15  Karl Lehenbauer <karl-pg@sc.com>
+
+    * Tagged for 1.4b3
+
+    * Fix pg_listen.  (callback string wasn't properly terminated)
+      Also made slight performance improvements in pg_listen.
+
+2002-11-15  Brett Schwarz <brett_schwarz@yahoo.com>
+
+    * Cleanup memory leaks in pg_result.
+
+    * Fixed bug in pg_result -assignbyidx
+
+2002-11-15  Karl Lehenbauer <karl-pg@sc.com>
+
+    * Convert all the "#ifdef TCL_ARRAYS" where tcl_value was called if 
+      defined and not called if not defined to always "call" tcl_value.  
+      In the case where TCL_ARRAYS isn't defined, tcl_value is now defined 
+      as a macro that returns whatever was given to it, making it a no-op.
+
+      This change allows the code to be compiled with TCL_MEM_DEBUG enabled
+      to look for memory leaks.
+
+2002-11-06  Karl Lehenbauer <karl-pg@sc.com>
+
+    * Tagged for 1.4b2
+
+    * Create the libpgtcl shared library in a way where it can find both 
+      the Postgres shared library it needs (libpq) and the Tcl shared
+      library it needs (libtcl).
+
+2002-11-05  Brett Schwarz <brett_schwarz@yahoo.com>
+
+    * added -list and -llist options to pg_result to return the
+      results as a list and list of lists
+
+2002-11-05  Karl Lehenbauer <karl-pg@sc.com>
+
+Started the ChangeLog.

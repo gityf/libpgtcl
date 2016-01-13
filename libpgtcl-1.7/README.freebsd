@@ -1,0 +1,30 @@
+
+
+$Id: README.freebsd,v 1.4 2008/05/20 15:06:59 karl Exp $
+
+libpgtcl can now be built under FreeBSD without any special tweaks.
+
+We'd love some help in making this a port in the FreeBSD ports tree, so this 
+build could be even more automatic.
+
+For now, you need to build and install Tcl and Postgres
+
+    cd /usr/ports/lang/tcl84
+    make
+    make install
+
+    cd /usr/ports/databases/postgresql83-client
+    make
+    make install
+
+You might need postgres-tcltk package, I'm not sure
+
+    cd /usr/ports/databases/postgresql-tcltk
+    make
+    make install
+
+Then run configure in this directory with the following parameters:
+
+./configure  --with-tcl=/usr/local/lib/tcl8.4 --with-tclinclude=/usr/local/include/tcl8.4 
+
+

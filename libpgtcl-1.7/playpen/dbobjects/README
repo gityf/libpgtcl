@@ -1,0 +1,10 @@
+
+
+DBOBJECTS
+
+$Id: README,v 1.1 2004/11/29 20:48:51 karl Exp $
+
+This is some very promising code that provides substantial automated integration
+between Itcl classes and PostgreSQL.
+
+

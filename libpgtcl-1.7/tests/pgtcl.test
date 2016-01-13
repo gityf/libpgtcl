@@ -1,0 +1,583 @@
+if {[lsearch [namespace children] ::tcltest] == -1} {
+    package require tcltest 2
+    namespace import -force ::tcltest::*
+}
+
+#tcltest::verbose 100
+#tcltest::debug 100
+
+set flist [glob -nocomplain -dir .. libpgtcl*[info sharedlibextension]]
+set flist [concat $flist [glob -nocomplain libpgtcl*[info sharedlibextension]]]
+
+if {[llength $flist] == 0} {
+    puts "\nCan not find a shared lib file\n"
+    exit
+}
+
+load [lindex $flist end]
+
+#
+#   set this to your specific location
+#
+array set conninfo {
+    host    192.168.123.180
+    port    5432
+    dbname  template1
+    user    postgres
+}
+
+if {[file exists [file join $env(HOME) .conninfo.tcl]]} {
+    source [file join $env(HOME) .conninfo.tcl]
+}
+
+#
+#
+#
+test pgtcl-1.1 {connect to db using old connection string} -body {
+
+    set conn [pg_connect $::conninfo(dbname) \
+        -connhandle pgsql3 \
+        -host $::conninfo(host) \
+        -port $::conninfo(port) \
+        -user $::conninfo(user)]
+
+    pg_disconnect $conn
+
+    set conn
+} -result pgsql3
+
+
+#
+#
+#
+test pgtcl-1.2 {connect to db using conninfo string} -body {
+
+    set conn [pg_connect -connhandle pgsql3 -conninfo \
+        "dbname=$::conninfo(dbname) host=$::conninfo(host) port=$::conninfo(port) user=$::conninfo(user)"]
+
+    pg_disconnect $conn
+
+    set conn   
+} -result pgsql3
+
+#
+#
+#
+test pgtcl-1.3 {connect to db using connlist option} -body {
+
+    set conn [pg::connect -connhandle pgsql3 -connlist [array get ::conninfo]]
+
+    pg_disconnect $conn
+
+    set conn
+} -result pgsql3
+
+#
+#
+#
+test pgtcl-1.4 {connect to db using -connhandle option} -body {
+
+    set conn [pg::connect -connlist [array get ::conninfo] -connhandle myhan]
+
+    pg_disconnect $conn
+
+    set conn
+} -result myhan
+
+#
+#
+#
+test pgtcl-2.1 {use connection as command} -body {
+
+    set conn [pg::connect -connlist [array get ::conninfo] -connhandle myhan]
+
+    set res [myhan exec "SELECT * FROM Pg_class LIMIT 5"]
+
+    pg_result $res -clear
+
+    pg_disconnect $conn
+
+    set res
+} -result myhan.0
+
+#
+#
+#
+test pgtcl-3.1 {test getting connection handles} -body {
+
+    set cnt 3
+    foreach C [list 1 2 3] {
+        set myconn($C) [pg::connect -connlist [array get ::conninfo] -connhandle pgsql$cnt]
+        incr cnt
+    }
+
+    #set conns [lsort [pg::dbinfo]]
+    set conns [lsort [pg::dbinfo connections]]
+
+    foreach C [list 1 2 3] {
+        pg::disconnect $myconn($C)
+    }
+
+    set conns
+} -result [lsort [list pgsql3 pgsql4 pgsql5]]
+
+#
+#
+#
+test pgtcl-3.2 {test getting connection handles, after disconnect} -body {
+
+    set cnt 3
+    foreach C [list 1 2 3] {
+        set myconn($C) [pg::connect -connlist [array get ::conninfo] -connhandle pgsql$cnt]
+        incr cnt
+    }
+
+    foreach C [list 1 2 3] {
+        pg::disconnect $myconn($C)
+    }
+
+    #pg::conninfo
+    pg::dbinfo connections
+} -result [list]
+
+#
+#
+#
+test pgtcl-3.3 {test renaming of connection handle command} -body {
+
+    set conn [pg::connect -connlist [array get ::conninfo] -connhandle pgsql3]
+
+    rename $conn MYCONN
+    set res [MYCONN exec "SELECT * FROM Pg_class LIMIT 5"]
+
+    pg_result $res -clear
+
+    pg_disconnect $conn
+
+    set res
+
+} -result pgsql3.0
+
+
+#
+#
+#
+test pgtcl-3.4 {test deleting of a command handle} -body {
+    unset -nocomplain res
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    set res [$conn exec "SELECT * FROM Pg_class  WHERE relname='tables'"]
+
+    pg::result $res -clear
+    rename $conn {}
+
+    #pg::conninfo
+    pg::dbinfo connections
+} -result [list]
+
+
+#
+#
+test pgtcl-4.1 {get result handles} -body {
+
+    unset res
+
+    set conn [pg::connect -connlist [array get ::conninfo] -connhandle pgsql9]
+
+    foreach R [list 1 2 3 4] {
+        set res($R) [$conn exec "SELECT * FROM Pg_class LIMIT $R"]
+    }
+
+    #set results [lsort [pg::results $conn]]
+    set results [lsort [pg::dbinfo results $conn]]
+
+    foreach R [list 1 2 3 4] {
+
+        pg_result $res($R) -clear
+    }
+
+    pg_disconnect $conn
+
+    set results
+
+} -result [lsort [list pgsql9.0 pgsql9.1 pgsql9.2 pgsql9.3]]
+
+#
+##
+#
+test pgtcl-4.2 {test using result handle command} -body {
+
+    catch {unset res}
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    set res [$conn exec "SELECT * FROM Pg_class LIMIT 1"]
+
+    set num [$res -numTuples]
+    $res -clear
+
+    pg_disconnect $conn
+
+    set num
+} -result 1
+
+#
+#
+#
+test pgtcl-4.3 {test deleting of a result handle} -body {
+    unset -nocomplain res
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    set res [$conn exec "SELECT * FROM Pg_class  WHERE relname='tables'"]
+
+    rename $res {}
+
+    #pg::result $res -clear
+    pg::dbinfo results $conn
+
+} -result [list]
+
+## only check if have dicts installed
+if {[llength [info commands dict]] == 1} {
+#
+#
+#
+test pgtcl-4.4 {get results as a DICT} -body {
+
+    unset res
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    set res [$conn exec "SELECT * FROM Pg_class  WHERE relname='pg_tables'"]
+
+    set results [pg::result $res -dict]
+
+    pg_result $res -clear
+
+    pg_disconnect $conn
+
+    dict get $results 0 relname
+
+} -result pg_tables
+}
+
+test pgtcl-4.5 {get results as a list} -body {
+
+    unset res
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    set res [$conn exec "SELECT relname 
+                           FROM Pg_class 
+                          WHERE relname LIKE 'pg_%' 
+                       ORDER BY relname 
+                          LIMIT 5"]
+
+    set results [pg::result $res -list]
+
+    pg_result $res -clear
+
+    pg_disconnect $conn
+
+    lsort $results
+    
+} -result [list pg_aggregate pg_aggregate_fnoid_index pg_am pg_am_name_index pg_am_oid_index]
+
+
+#
+#
+#
+test pgtcl-4.6 {get results as a list of lists} -body {
+
+    unset res
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    set res [$conn exec "SELECT relname, relkind
+                           FROM Pg_class 
+                          WHERE relname LIKE 'pg_%' 
+                       ORDER BY relname 
+                          LIMIT 3"]
+
+    set results [pg::result $res -llist]
+
+    pg_result $res -clear
+
+    pg_disconnect $conn
+
+    lsort $results
+    
+} -result [list [list pg_aggregate r] [list pg_aggregate_fnoid_index i] [list pg_am r]]
+
+
+#
+#
+#
+test pgtcl-5.1 {quote a string} -body {
+
+    set qstr [pg::quote "o'reilly"]
+
+    set qstr
+} -result 'o''reilly'
+
+#
+#
+#
+test pgtcl-5.2 {escape a binary string} -body {
+
+    set bn [binary format a* \000\\HELLO's]
+    set qstr [pg::escape_bytea $bn]
+
+    set qstr
+} -result \\\\000\\\\\\\\HELLO''s
+
+#
+#
+#
+test pgtcl-5.3 {unescape a binary string} -body {
+
+    set bn [binary format a* \000\\HELLO's]
+    set qstr [pg::unescape_bytea "\\\\000\\\\\\\\HELLO\\'s"]
+
+    set qstr
+} -result [binary format a* \\000\\\\HELLO\'s]
+
+
+
+#
+#
+#
+test pgtcl-6.1 {using pg_exec with params} -body {
+
+    unset res
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    set res [$conn exec {SELECT relname
+                           FROM Pg_class
+                          WHERE relname LIKE $1 
+                       ORDER BY relname
+                          LIMIT $2} "pg_%" 5]
+
+    set results [pg::result $res -list]
+
+    pg_result $res -clear
+
+    pg_disconnect $conn
+
+    lsort $results
+
+} -result [list pg_aggregate pg_aggregate_fnoid_index pg_am pg_am_name_index pg_am_oid_index]
+
+
+#
+#
+#
+test pgtcl-6.2 {using pg_exec_prepared with params} -body {
+
+    unset res
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    set res [$conn exec {PREPARE test_prepare (integer)
+                          AS SELECT relname
+                           FROM Pg_class
+                          WHERE relname LIKE 'pg_%'
+                       ORDER BY relname
+                          LIMIT $1}]
+
+    set res [pg::exec_prepared $conn test_prepare 5]
+
+    set results [pg::result $res -list]
+
+    if {[$res -status] != "PGRES_TUPLES_OK"} {
+            puts "[$res -status] [pg::result $res -error] during select"
+    }
+
+    pg_result $res -clear
+
+    pg_disconnect $conn
+
+    lsort $results
+
+} -result [list pg_aggregate pg_aggregate_fnoid_index pg_am pg_am_name_index pg_am_oid_index]
+
+
+#
+#
+#
+test pgtcl-7.1 {using pg_select} -body {
+
+    unset res
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    pg::select $conn "SELECT relname FROM Pg_class LIMIT 5" resultArr {
+        set headers $resultArr(.headers)
+        set numcols $resultArr(.numcols)
+        set tupno $resultArr(.tupno)
+
+        lappend names $resultArr(relname)
+        
+    } 
+
+    rename $conn {}
+
+    llength $names
+ 
+} -result 5
+
+
+
+#
+#
+#
+test pgtcl-8.1 {using pg_execute} -body {
+
+    catch {unset res}
+    catch {unset names}
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    set names [list]
+    pg::execute -array resultArr $conn "SELECT relname FROM Pg_class LIMIT 5" {
+
+        lappend names $resultArr(relname)
+        
+    } 
+
+    rename $conn {}
+    llength $names
+ 
+} -result 5
+
+#
+#
+#
+test pgtcl-8.2 {using connection command handle for pg_execute, no options} -body {
+
+    catch {unset res}
+    catch {unset names}
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    $conn execute -array resultArr "SELECT relname FROM Pg_class LIMIT 5" {
+        lappend ::names $resultArr(relname)
+        
+    } 
+
+    rename $conn {}
+
+    llength $::names
+ 
+} -result 5
+
+#
+#
+#
+test pgtcl-8.3 {using connection command handle for pg_execute, -array option} -body {
+
+    catch {unset res}
+    catch {unset names}
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    $conn execute -array resultArr -oid OID "SELECT relname FROM Pg_class LIMIT 5" {
+        lappend ::names $resultArr(relname)
+        
+    } 
+
+    rename $conn {}
+
+    llength $::names
+ 
+} -result 5
+
+#
+#
+#
+test pgtcl-9.1 {dbinfo version} -body {
+    unset -nocomplain res
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    set val [pg::dbinfo version $conn]
+    set val2 [$conn version]
+    
+    lappend res [string equal $val $val2]
+    ::pg::disconnect $conn
+
+    lappend res [regexp {(7|8)0([0-9])0([0-9])} $val]
+
+} -result [list 1 1]
+
+#
+#
+#
+test pgtcl-9.2 {dbinfo protocol} -body {
+    unset -nocomplain res
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    set val [pg::dbinfo protocol $conn]
+    set val2 [$conn protocol]
+    lappend res [string equal $val $val2]
+    ::pg::disconnect $conn
+
+    lappend res [regexp {2|3} $val]
+
+} -result [list 1 1]
+
+#
+#
+#
+test pgtcl-9.3 {dbinfo param} -body {
+    unset -nocomplain res
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    set val [pg::dbinfo param $conn server_version]
+    set val2 [$conn param server_version]
+    lappend res [string equal $val $val2]
+    ::pg::disconnect $conn
+
+    lappend res [regexp {(7|8)\.([0-9])\.([0-9])} $val]
+
+} -result [list 1 1]
+
+
+#
+#
+#
+test pgtcl-9.4 {dbinfo backend pid} -body {
+    unset -nocomplain res
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    set val [pg::dbinfo backendpid $conn]
+    set val2 [$conn backendpid]
+    lappend res [string equal $val $val2]
+    ::pg::disconnect $conn
+
+    lappend res [regexp {^[0-9]{2,6}$} $val]
+
+} -result [list 1 1]
+
+#
+#
+#
+test pgtcl-9.5 {dbinfo socket} -body {
+    unset -nocomplain res
+
+    set conn [pg::connect -connlist [array get ::conninfo]]
+
+    set val [pg::dbinfo socket $conn]
+    set val2 [$conn socket]
+    lappend res [string equal $val $val2]
+    ::pg::disconnect $conn
+
+    lappend res [regexp {^[0-9]{1,6}$} $val]
+
+} -result [list 1 1]
